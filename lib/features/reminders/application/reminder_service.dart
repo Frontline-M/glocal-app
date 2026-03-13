@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -10,7 +10,9 @@ import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../../core/l10n/spoken_phrases.dart';
 import '../../../core/storage/hive_bootstrap.dart';
+import '../../../core/utils/tts_locale_resolver.dart';
 import '../data/hive_reminder_repository.dart';
 import '../domain/reminder_categories.dart';
 import '../domain/reminder_item.dart';
@@ -90,29 +92,12 @@ class ReminderService {
     if (!Hive.isBoxOpen(HiveBootstrap.runtimeBox)) {
       return false;
     }
-    return Hive.box<dynamic>(HiveBootstrap.runtimeBox).get(_muteKey) as bool? ?? false;
+    return Hive.box<dynamic>(HiveBootstrap.runtimeBox).get(_muteKey) as bool? ??
+        false;
   }
 
   Future<bool> isTtsLanguageAvailable(String languageCode) async {
-    final available = await _availableTtsLocales();
-    if (available.isEmpty) return false;
-
-    final normalized = languageCode.toLowerCase();
-    if (_matchLocale(available, normalized) != null) {
-      return true;
-    }
-
-    final hinted = _preferredLocaleHints[normalized];
-    if (hinted != null &&
-        _matchLocale(available, hinted.toLowerCase()) != null) {
-      return true;
-    }
-
-    return available.any((locale) {
-      final lower = locale.toLowerCase();
-      return lower.startsWith('$normalized-') ||
-          lower.startsWith('${normalized}_');
-    });
+    return TtsLocaleResolver.isLanguageAvailable(_tts, languageCode);
   }
 
   Future<String?> startCustomReminderRecording(String reminderId) async {
@@ -241,12 +226,22 @@ class ReminderService {
   }
 
   Future<void> deleteReminder(String id) async {
+    ReminderItem? existing;
+    final reminders = await _repository.all();
+    for (final entry in reminders) {
+      if (entry.id == id) {
+        existing = entry;
+        break;
+      }
+    }
+
     try {
       await _notifications.cancel(id: id.hashCode);
     } catch (_) {
       // Ignore notification-cancel failures and still delete persisted reminder.
     }
     await _repository.delete(id);
+    await _deleteCustomAudio(existing?.customAudioPath);
   }
 
   Future<void> dismissDueReminders(DateTime now) async {
@@ -310,17 +305,19 @@ class ReminderService {
 
     for (final item in reminders) {
       final isDue = !item.when.isAfter(now);
-      if (!isDue) {
+      if (!isDue || item.isSpoken) {
         continue;
       }
 
+      var shouldDeleteAfterSpeech = false;
       if (item.repeatDaily) {
         final nextWhen = _nextFutureDaily(item.when, now);
         final next = item.copyWith(when: nextWhen, clearSpokenAt: true);
         await _repository.save(next);
         await _schedule(next);
       } else {
-        await deleteReminder(item.id);
+        await _repository.save(item.copyWith(spokenAt: now));
+        shouldDeleteAfterSpeech = true;
       }
 
       try {
@@ -328,6 +325,10 @@ class ReminderService {
         await _speakReminder(item);
       } catch (_) {
         // Continue lifecycle even if speech playback fails.
+      } finally {
+        if (shouldDeleteAfterSpeech) {
+          await deleteReminder(item.id);
+        }
       }
     }
   }
@@ -374,7 +375,9 @@ class ReminderService {
       final file = File(item.customAudioPath!);
       if (await file.exists()) {
         for (var i = 0; i < 3; i++) {
-          if (_muted) break;
+          if (_muted) {
+            break;
+          }
           await _audioPlayer.stop();
           await _audioPlayer.play(DeviceFileSource(item.customAudioPath!));
           await _audioPlayer.onPlayerComplete.first;
@@ -383,7 +386,7 @@ class ReminderService {
       }
     }
 
-    final locale = await _resolveTtsLocale(item.languageCode);
+    final locale = await TtsLocaleResolver.resolveLocale(_tts, item.languageCode);
 
     try {
       await _tts.setLanguage(locale);
@@ -403,12 +406,17 @@ class ReminderService {
     await _tts.awaitSpeakCompletion(true);
     await _tts.stop();
 
-    final prefix = ReminderCategories.spokenPrefixFor(item.category);
     for (var i = 0; i < 3; i++) {
       if (_muted) {
         break;
       }
-      await _tts.speak('$prefix. ${item.title}');
+      await _tts.speak(
+        SpokenPhrases.reminderAnnouncement(
+          item.languageCode,
+          category: item.category,
+          title: item.title,
+        ),
+      );
     }
   }
 
@@ -418,7 +426,8 @@ class ReminderService {
     }
 
     final first = missed.first;
-    final locale = await _resolveTtsLocale(first.languageCode);
+    final locale =
+        await TtsLocaleResolver.resolveLocale(_tts, first.languageCode);
     try {
       await _tts.setLanguage(locale);
     } catch (_) {
@@ -435,11 +444,16 @@ class ReminderService {
 
     final count = missed.length;
     final preview = missed.take(2).map((r) => r.title).join(', ');
-    final suffix = count > 2 ? ', and others' : '';
     await _tts.setVolume(1.0);
     await _tts.awaitSpeakCompletion(true);
     await _tts.speak(
-        'You missed $count reminder${count == 1 ? '' : 's'}. $preview$suffix.');
+      SpokenPhrases.missedRemindersSummary(
+        first.languageCode,
+        count: count,
+        preview: preview,
+        hasMore: count > 2,
+      ),
+    );
   }
 
   Future<void> _schedule(ReminderItem item) async {
@@ -487,93 +501,18 @@ class ReminderService {
     return null;
   }
 
-  Future<String> _resolveTtsLocale(String languageCode) async {
-    final available = await _availableTtsLocales();
-    if (available.isEmpty) {
-      return languageCode;
+  Future<void> _deleteCustomAudio(String? path) async {
+    if (path == null || path.isEmpty) {
+      return;
     }
 
-    final normalized = languageCode.toLowerCase();
-    final direct = _matchLocale(available, normalized);
-    if (direct != null) {
-      return direct;
-    }
-
-    final hinted = _preferredLocaleHints[normalized];
-    if (hinted != null) {
-      final hintMatch = _matchLocale(available, hinted.toLowerCase());
-      if (hintMatch != null) {
-        return hintMatch;
-      }
-    }
-
-    final languageOnlyMatch = available.firstWhere(
-      (locale) {
-        final lower = locale.toLowerCase();
-        return lower.startsWith('$normalized-') ||
-            lower.startsWith('${normalized}_');
-      },
-      orElse: () => '',
-    );
-    if (languageOnlyMatch.isNotEmpty) {
-      return languageOnlyMatch;
-    }
-
-    final english = _matchLocale(available, 'en-us') ??
-        _matchLocale(available, 'en-gb') ??
-        _matchLocale(available, 'en');
-    return english ?? available.first;
-  }
-
-  String? _matchLocale(List<String> available, String target) {
-    final exact = available.where((e) => e.toLowerCase() == target).toList();
-    if (exact.isNotEmpty) {
-      return exact.first;
-    }
-
-    final dashNormalized = target.replaceAll('_', '-');
-    final fuzzy = available.where((e) {
-      final lower = e.toLowerCase().replaceAll('_', '-');
-      return lower == dashNormalized;
-    }).toList();
-    if (fuzzy.isNotEmpty) {
-      return fuzzy.first;
-    }
-
-    return null;
-  }
-
-  Future<List<String>> _availableTtsLocales() async {
     try {
-      final raw = await _tts.getLanguages;
-      if (raw is List) {
-        return raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
       }
     } catch (_) {
-      // Ignore and fallback to defaults.
+      // Ignore local file cleanup failures.
     }
-    return const [];
   }
-
-  static const _preferredLocaleHints = <String, String>{
-    'en': 'en-US',
-    'fr': 'fr-FR',
-    'es': 'es-ES',
-    'de': 'de-DE',
-    'ar': 'ar-SA',
-    'hi': 'hi-IN',
-    'yo': 'yo-NG',
-    'ha': 'ha-NG',
-    'ig': 'ig-NG',
-    'sw': 'sw-KE',
-    'ak': 'ak-GH',
-    'tw': 'ak-GH',
-    'am': 'am-ET',
-    'om': 'om-ET',
-    'ja': 'ja-JP',
-    'zh': 'zh-CN',
-  };
 }
-
-
-

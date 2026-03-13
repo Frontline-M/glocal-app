@@ -74,7 +74,6 @@ class GlocalRuntime {
 
     final announcementService = AnnouncementService(
       FlutterTts(),
-      weatherService,
       calendarService,
       fallbackNextEvent: (now, within) async {
         final reminders = await reminderService.list();

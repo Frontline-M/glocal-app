@@ -3,6 +3,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../utils/device_timezone_resolver.dart';
+
 class NotificationBootstrap {
   static const backgroundServiceChannelId = 'glocal_background_service';
   static const backgroundServiceNotificationId = 4401;
@@ -18,7 +20,7 @@ class NotificationBootstrap {
     }
 
     tz_data.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Europe/London'));
+    tz.setLocalLocation(DeviceTimezoneResolver.resolveLocation());
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings();

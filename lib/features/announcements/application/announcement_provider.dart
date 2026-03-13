@@ -39,7 +39,6 @@ final locationProfileServiceProvider =
 final announcementServiceProvider = Provider<AnnouncementService>((ref) {
   return AnnouncementService(
     ref.read(ttsProvider),
-    ref.read(weatherServiceProvider),
     ref.read(calendarServiceProvider),
     fallbackNextEvent: (now, within) async {
       final reminders = await ref.read(reminderServiceProvider).list();

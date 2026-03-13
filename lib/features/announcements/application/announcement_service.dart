@@ -1,23 +1,21 @@
-﻿import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../../core/config/app_languages.dart';
-import '../../../core/utils/time_formatters.dart';
+import '../../../core/l10n/spoken_phrases.dart';
+import '../../../core/utils/tts_locale_resolver.dart';
 import '../../calendar/application/calendar_service.dart';
 import '../../calendar/domain/calendar_event_summary.dart';
 import '../../settings/domain/user_settings.dart';
-import '../../weather/application/weather_service.dart';
 import '../../weather/domain/weather_snapshot.dart';
 
 class AnnouncementService {
   AnnouncementService(
     this._tts,
-    this._weatherService,
     this._calendarService, {
     this.fallbackNextEvent,
   });
 
   final FlutterTts _tts;
-  final WeatherService _weatherService;
   final CalendarService _calendarService;
   final Future<CalendarEventSummary?> Function(DateTime now, Duration within)?
       fallbackNextEvent;
@@ -38,9 +36,7 @@ class AnnouncementService {
       sceneType: 'time',
     );
 
-    final formatted = formatHourAnnouncement(now, language);
-    final phrase = _localized(language, 'time');
-    var message = '$phrase $formatted';
+    var message = SpokenPhrases.timeAnnouncement(language, now);
 
     CalendarEventSummary? event;
     try {
@@ -88,15 +84,10 @@ class AnnouncementService {
       sceneType: 'weather',
     );
 
-    final descriptor = _weatherService.describeCode(snapshot.weatherCode);
-    final ageMinutes = now.difference(snapshot.fetchedAt).inMinutes;
-    final weatherPhrase = _localized(language, 'weather');
-
     if (snapshot.isStale) {
       final staleMessage = _buildStaleWeatherMessage(
         language: language,
-        ageMinutes: ageMinutes,
-        descriptor: descriptor,
+        weatherCode: snapshot.weatherCode,
         temperatureC: snapshot.temperatureC,
       );
       await _tts.speak(staleMessage);
@@ -104,19 +95,25 @@ class AnnouncementService {
     }
 
     await _tts.speak(
-      '$weatherPhrase $descriptor, ${snapshot.temperatureC.toStringAsFixed(0)} degrees Celsius.',
+      SpokenPhrases.weatherAnnouncement(
+        language,
+        weatherCode: snapshot.weatherCode,
+        temperatureC: snapshot.temperatureC,
+      ),
     );
   }
 
   String _buildStaleWeatherMessage({
     required String language,
-    required int ageMinutes,
-    required String descriptor,
+    required int weatherCode,
     required double temperatureC,
   }) {
-    final weatherPhrase = _localized(language, 'weather');
-    final temperature = temperatureC.toStringAsFixed(0);
-    return 'Using cached weather. $weatherPhrase $descriptor, $temperature degrees Celsius.';
+    return SpokenPhrases.weatherAnnouncement(
+      language,
+      weatherCode: weatherCode,
+      temperatureC: temperatureC,
+      cached: true,
+    );
   }
 
   bool _isQuietHours(DateTime now, UserSettings settings) {
@@ -149,7 +146,7 @@ class AnnouncementService {
     String? sceneVoiceName,
     String? sceneType,
   }) async {
-    final locale = await _resolveTtsLocale(languageCode);
+    final locale = await TtsLocaleResolver.resolveLocale(_tts, languageCode);
 
     try {
       await _tts.setLanguage(locale);
@@ -184,7 +181,7 @@ class AnnouncementService {
         await _tts.setVoice({'name': chosenVoice});
         return;
       } catch (_) {
-        // fallback below
+        // Fallback below.
       }
     }
 
@@ -211,143 +208,10 @@ class AnnouncementService {
       return '';
     }
 
-    final label = _localized(lang, 'nextEvent');
-    if (minutes < 60) {
-      return '$label ${event.title} in $minutes minutes';
-    }
-
-    final hours = (minutes / 60).floor();
-    final remaining = minutes % 60;
-    if (remaining == 0) {
-      return '$label ${event.title} in $hours hours';
-    }
-    return '$label ${event.title} in $hours hours and $remaining minutes';
-  }
-
-  Future<String> _resolveTtsLocale(String languageCode) async {
-    final available = await _availableTtsLocales();
-    if (available.isEmpty) {
-      return languageCode;
-    }
-
-    final normalized = languageCode.toLowerCase();
-    final direct = _matchLocale(available, normalized);
-    if (direct != null) {
-      return direct;
-    }
-
-    final hinted = _preferredLocaleHints[normalized];
-    if (hinted != null) {
-      final hintMatch = _matchLocale(available, hinted.toLowerCase());
-      if (hintMatch != null) {
-        return hintMatch;
-      }
-    }
-
-    final languageOnlyMatch = available.firstWhere(
-      (locale) {
-        final lower = locale.toLowerCase();
-        return lower.startsWith('$normalized-') || lower.startsWith('${normalized}_');
-      },
-      orElse: () => '',
+    return SpokenPhrases.nextEventSnippet(
+      lang,
+      title: event.title,
+      minutes: minutes,
     );
-    if (languageOnlyMatch.isNotEmpty) {
-      return languageOnlyMatch;
-    }
-
-    final english = _matchLocale(available, 'en-us') ??
-        _matchLocale(available, 'en-gb') ??
-        _matchLocale(available, 'en');
-    return english ?? available.first;
-  }
-
-  String? _matchLocale(List<String> available, String target) {
-    final exact = available.where((e) => e.toLowerCase() == target).toList();
-    if (exact.isNotEmpty) {
-      return exact.first;
-    }
-
-    final dashNormalized = target.replaceAll('_', '-');
-    final fuzzy = available.where((e) {
-      final lower = e.toLowerCase().replaceAll('_', '-');
-      return lower == dashNormalized;
-    }).toList();
-    if (fuzzy.isNotEmpty) {
-      return fuzzy.first;
-    }
-
-    return null;
-  }
-
-  Future<List<String>> _availableTtsLocales() async {
-    try {
-      final raw = await _tts.getLanguages;
-      if (raw is List) {
-        return raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
-      }
-    } catch (_) {
-      // Ignore and fallback to default.
-    }
-    return const [];
-  }
-
-  static const _preferredLocaleHints = <String, String>{
-    'en': 'en-US',
-    'fr': 'fr-FR',
-    'es': 'es-ES',
-    'de': 'de-DE',
-    'ar': 'ar-SA',
-    'hi': 'hi-IN',
-    'yo': 'yo-NG',
-    'ha': 'ha-NG',
-    'ig': 'ig-NG',
-    'sw': 'sw-KE',
-    'ak': 'ak-GH',
-    'tw': 'ak-GH',
-    'am': 'am-ET',
-    'om': 'om-ET',
-    'ja': 'ja-JP',
-    'zh': 'zh-CN',
-  };
-
-  String _localized(String lang, String key) {
-    const map = {
-      'en': {
-        'time': 'The time is',
-        'weather': 'Current weather is',
-        'nextEvent': 'Next event',
-      },
-      'fr': {
-        'time': 'Il est',
-        'weather': 'La meteo actuelle est',
-        'nextEvent': 'Prochain evenement',
-      },
-      'es': {
-        'time': 'La hora es',
-        'weather': 'El clima actual es',
-        'nextEvent': 'Proximo evento',
-      },
-      'de': {
-        'time': 'Es ist',
-        'weather': 'Aktuelles Wetter ist',
-        'nextEvent': 'Nachstes Ereignis',
-      },
-      'hi': {
-        'time': 'Samay hai',
-        'weather': 'Vartaman mausam hai',
-        'nextEvent': 'Agla karyakram',
-      },
-      'ar': {
-        'time': 'Alwaqt alaan',
-        'weather': 'Altqs alhaliy hu',
-        'nextEvent': 'alhadath altali',
-      },
-    };
-
-    return map[lang]?[key] ?? map['en']![key]!;
   }
 }
-
-
-
-
