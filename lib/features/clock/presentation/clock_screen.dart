@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -214,7 +214,7 @@ class _ClockScreenState extends ConsumerState<ClockScreen> {
                         return const _InfoText('Weather unavailable');
                       }
                       return _InfoText(
-                          '${weather.temperatureC.toStringAsFixed(1)}°C');
+                          '${weather.temperatureC.toStringAsFixed(1)}\u00B0C');
                     },
                     loading: () => const _InfoText('Updating weather...'),
                     error: (_, __) => const _InfoText(
@@ -529,7 +529,9 @@ class _ClockScreenState extends ConsumerState<ClockScreen> {
                   onPressed: () async {
                     dialogOpen = false;
                     if (isRecording) {
-                      await reminderService.stopCustomReminderRecording();
+                      final discarded =
+                          await reminderService.stopCustomReminderRecording();
+                      await reminderService.deleteCustomAudioFile(discarded);
                     }
                     if (context.mounted) {
                       Navigator.of(context).pop(false);
@@ -563,6 +565,19 @@ class _ClockScreenState extends ConsumerState<ClockScreen> {
     dialogOpen = false;
     await reminderService.stopTranscription();
 
+    if (shouldSave != true) {
+      if (isRecording) {
+        final discarded = await reminderService.stopCustomReminderRecording();
+        if (discarded != null && discarded.isNotEmpty) {
+          customAudioPath = discarded;
+        }
+        isRecording = false;
+      }
+      if (customAudioPath != null) {
+        await reminderService.deleteCustomAudioFile(customAudioPath);
+      }
+    }
+
     if (shouldSave == true) {
       await reminderService.createReminder(
         id: reminderId,
@@ -595,3 +610,6 @@ class _InfoText extends StatelessWidget {
     );
   }
 }
+
+
+

@@ -1,5 +1,4 @@
-import 'dart:async';
-import 'dart:io';
+﻿import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -12,6 +11,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../../../core/l10n/spoken_phrases.dart';
 import '../../../core/storage/hive_bootstrap.dart';
+import '../../../core/storage/secure_audio_storage.dart';
 import '../../../core/utils/tts_locale_resolver.dart';
 import '../data/hive_reminder_repository.dart';
 import '../domain/reminder_categories.dart';
@@ -43,6 +43,7 @@ class ReminderService {
   static const _muteKey = 'reminder_muted';
 
   bool _muted;
+  String? _activeRecordingReminderId;
 
   bool get muted => _muted;
 
@@ -108,8 +109,9 @@ class ReminderService {
 
     await stopTranscription();
 
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await getTemporaryDirectory();
     final path = '${dir.path}/reminder_$reminderId.m4a';
+    _activeRecordingReminderId = reminderId;
 
     await _recorder.start(
       const RecordConfig(
@@ -124,7 +126,23 @@ class ReminderService {
   }
 
   Future<String?> stopCustomReminderRecording() async {
-    return _recorder.stop();
+    final path = await _recorder.stop();
+    final reminderId = _activeRecordingReminderId;
+    _activeRecordingReminderId = null;
+
+    if (path == null || path.isEmpty || reminderId == null) {
+      return path;
+    }
+
+    try {
+      return await SecureAudioStorage.finalizeRecording(
+        reminderId: reminderId,
+        sourcePath: path,
+      );
+    } catch (_) {
+      await _deleteCustomAudio(path);
+      return null;
+    }
   }
 
   Future<String> transcribeSingleUtterance({String? languageCode}) async {
@@ -372,16 +390,8 @@ class ReminderService {
     }
 
     if (item.customAudioPath != null && item.customAudioPath!.isNotEmpty) {
-      final file = File(item.customAudioPath!);
-      if (await file.exists()) {
-        for (var i = 0; i < 3; i++) {
-          if (_muted) {
-            break;
-          }
-          await _audioPlayer.stop();
-          await _audioPlayer.play(DeviceFileSource(item.customAudioPath!));
-          await _audioPlayer.onPlayerComplete.first;
-        }
+      final played = await _playCustomReminderAudio(item.customAudioPath!);
+      if (played) {
         return;
       }
     }
@@ -417,6 +427,27 @@ class ReminderService {
           title: item.title,
         ),
       );
+    }
+  }
+
+  Future<bool> _playCustomReminderAudio(String storedPath) async {
+    final prepared = await SecureAudioStorage.preparePlayback(storedPath);
+    if (prepared == null) {
+      return false;
+    }
+
+    try {
+      for (var i = 0; i < 3; i++) {
+        if (_muted) {
+          break;
+        }
+        await _audioPlayer.stop();
+        await _audioPlayer.play(DeviceFileSource(prepared.path));
+        await _audioPlayer.onPlayerComplete.first;
+      }
+      return true;
+    } finally {
+      await SecureAudioStorage.disposePreparedPlayback(prepared);
     }
   }
 
@@ -501,18 +532,22 @@ class ReminderService {
     return null;
   }
 
+  Future<void> deleteCustomAudioFile(String? path) => _deleteCustomAudio(path);
+
   Future<void> _deleteCustomAudio(String? path) async {
     if (path == null || path.isEmpty) {
       return;
     }
 
     try {
-      final file = File(path);
-      if (await file.exists()) {
-        await file.delete();
-      }
+      await SecureAudioStorage.deleteStoredAudio(path);
     } catch (_) {
       // Ignore local file cleanup failures.
     }
   }
+
 }
+
+
+
+
