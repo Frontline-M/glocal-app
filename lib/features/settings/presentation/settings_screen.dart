@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -19,10 +19,12 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: asyncSettings.when(
-        data: (settings) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+      body: SafeArea(
+        top: false,
+        child: asyncSettings.when(
+          data: (settings) => ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
             SwitchListTile(
               title: const Text('Hourly time announcement'),
               value: settings.timeAnnouncementsEnabled,
@@ -260,12 +262,13 @@ class SettingsScreen extends ConsumerWidget {
               child: const Text('Test hourly announcement now'),
             ),
             const SizedBox(height: 12),
-            _QuietHoursTile(settings: settings),
-          ],
+              _QuietHoursTile(settings: settings),
+            ],
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) =>
+              Center(child: Text('Failed to load settings: $error')),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('Failed to load settings: $error')),
       ),
     );
   }
@@ -530,3 +533,4 @@ class _QuietHoursTile extends ConsumerWidget {
     );
   }
 }
+

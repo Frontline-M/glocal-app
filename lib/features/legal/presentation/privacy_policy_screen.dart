@@ -55,25 +55,29 @@ class PrivacyPolicyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Privacy Policy')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            'Glocal Privacy Policy',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Last updated: March 12, 2026',
-            style: TextStyle(color: Colors.black54),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'This in-app summary explains how Glocal uses permissions and device data to provide reminders, spoken announcements, weather updates, and optional calendar context.',
-          ),
-          const SizedBox(height: 20),
-          for (final section in _sections) _PolicySectionView(section: section),
-        ],
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              'Glocal Privacy Policy',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Last updated: March 12, 2026',
+              style: TextStyle(color: Colors.black54),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'This in-app summary explains how Glocal uses permissions and device data to provide reminders, spoken announcements, weather updates, and optional calendar context.',
+            ),
+            const SizedBox(height: 20),
+            for (final section in _sections)
+              _PolicySectionView(section: section),
+          ],
+        ),
       ),
     );
   }
@@ -109,3 +113,4 @@ class _PolicySection {
   final String title;
   final String body;
 }
+
