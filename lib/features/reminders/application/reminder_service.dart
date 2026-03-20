@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -10,12 +10,15 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../../core/l10n/spoken_phrases.dart';
+import '../../../core/speech/speech_governance.dart';
 import '../../../core/storage/hive_bootstrap.dart';
 import '../../../core/storage/secure_audio_storage.dart';
 import '../../../core/utils/tts_locale_resolver.dart';
 import '../data/hive_reminder_repository.dart';
 import '../domain/reminder_categories.dart';
 import '../domain/reminder_item.dart';
+import '../../settings/application/settings_service.dart';
+import '../../settings/domain/user_settings.dart';
 
 class ReminderService {
   ReminderService({
@@ -25,12 +28,16 @@ class ReminderService {
     required FlutterTts tts,
     required AudioRecorder recorder,
     required AudioPlayer audioPlayer,
+    required SettingsService settingsService,
+    required SpeechGovernanceService governanceService,
   })  : _speechToText = speechToText,
         _notifications = notifications,
         _repository = repository,
         _tts = tts,
         _recorder = recorder,
         _audioPlayer = audioPlayer,
+        _settingsService = settingsService,
+        _governanceService = governanceService,
         _muted = _loadPersistedMute();
 
   final SpeechToText _speechToText;
@@ -39,6 +46,8 @@ class ReminderService {
   final FlutterTts _tts;
   final AudioRecorder _recorder;
   final AudioPlayer _audioPlayer;
+  final SettingsService _settingsService;
+  final SpeechGovernanceService _governanceService;
 
   static const _muteKey = 'reminder_muted';
 
@@ -389,14 +398,22 @@ class ReminderService {
       return;
     }
 
+    final speechRequest = await _buildReminderSpeechRequest();
+    final decision = await _governanceService.evaluate(speechRequest);
+    if (!decision.shouldSpeak) {
+      return;
+    }
+
     if (item.customAudioPath != null && item.customAudioPath!.isNotEmpty) {
       final played = await _playCustomReminderAudio(item.customAudioPath!);
       if (played) {
+        await _governanceService.markSpoken(speechRequest);
         return;
       }
     }
 
-    final locale = await TtsLocaleResolver.resolveLocale(_tts, item.languageCode);
+    final locale =
+        await TtsLocaleResolver.resolveLocale(_tts, item.languageCode);
 
     try {
       await _tts.setLanguage(locale);
@@ -428,6 +445,8 @@ class ReminderService {
         ),
       );
     }
+
+    await _governanceService.markSpoken(speechRequest);
   }
 
   Future<bool> _playCustomReminderAudio(String storedPath) async {
@@ -453,6 +472,12 @@ class ReminderService {
 
   Future<void> _speakRecoverySummary(List<ReminderItem> missed) async {
     if (missed.isEmpty) {
+      return;
+    }
+
+    final speechRequest = await _buildReminderSpeechRequest();
+    final decision = await _governanceService.evaluate(speechRequest);
+    if (!decision.shouldSpeak) {
       return;
     }
 
@@ -485,6 +510,7 @@ class ReminderService {
         hasMore: count > 2,
       ),
     );
+    await _governanceService.markSpoken(speechRequest);
   }
 
   Future<void> _schedule(ReminderItem item) async {
@@ -546,8 +572,19 @@ class ReminderService {
     }
   }
 
+  Future<SpeechRequest> _buildReminderSpeechRequest() async {
+    UserSettings settings;
+    try {
+      settings = await _settingsService.load();
+    } catch (_) {
+      settings = UserSettings.defaults();
+    }
+
+    return SpeechRequest(
+      kind: SpeechAnnouncementKind.reminder,
+      now: DateTime.now(),
+      talkativenessMode: settings.talkativenessMode,
+      bypassRecentSuppression: true,
+    );
+  }
 }
-
-
-
-

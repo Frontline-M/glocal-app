@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +13,7 @@ import '../../announcements/data/hourly_announcement_scheduler.dart';
 import '../../reminders/application/reminder_provider.dart';
 import '../../reminders/domain/reminder_categories.dart';
 import '../../settings/application/settings_provider.dart';
+import '../../steps/application/step_provider.dart';
 import '../../weather/application/weather_provider.dart';
 
 class ClockScreen extends ConsumerStatefulWidget {
@@ -111,6 +112,7 @@ class _ClockScreenState extends ConsumerState<ClockScreen> {
       try {
         if (!androidBackgroundDriven) {
           await ref.read(reminderServiceProvider).announceDueReminders(current);
+          await ref.read(stepAnnouncementControllerProvider).run(current);
         }
       } catch (_) {
         // Ignore reminder backend errors and keep UI active.
@@ -610,6 +612,3 @@ class _InfoText extends StatelessWidget {
     );
   }
 }
-
-
-

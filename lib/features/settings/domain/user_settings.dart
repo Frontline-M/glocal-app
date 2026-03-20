@@ -1,3 +1,6 @@
+import '../../../core/speech/speech_talkativeness.dart';
+import '../../steps/domain/step_announcement_mode.dart';
+
 class UserSettings {
   const UserSettings({
     required this.languageCode,
@@ -17,6 +20,10 @@ class UserSettings {
     required this.languageRotationEnabled,
     required this.locationProfilesEnabled,
     required this.profileRadiusMeters,
+    required this.talkativenessMode,
+    required this.stepAnnouncementsEnabled,
+    required this.stepAnnouncementMode,
+    required this.dailyStepGoal,
     this.homeLatitude,
     this.homeLongitude,
     this.workLatitude,
@@ -42,6 +49,10 @@ class UserSettings {
   final bool languageRotationEnabled;
   final bool locationProfilesEnabled;
   final double profileRadiusMeters;
+  final SpeechTalkativenessMode talkativenessMode;
+  final bool stepAnnouncementsEnabled;
+  final StepAnnouncementMode stepAnnouncementMode;
+  final int dailyStepGoal;
   final double? homeLatitude;
   final double? homeLongitude;
   final double? workLatitude;
@@ -65,6 +76,10 @@ class UserSettings {
         languageRotationEnabled: false,
         locationProfilesEnabled: false,
         profileRadiusMeters: 500,
+        talkativenessMode: SpeechTalkativenessMode.balanced,
+        stepAnnouncementsEnabled: false,
+        stepAnnouncementMode: StepAnnouncementMode.summaryOnly,
+        dailyStepGoal: 8000,
       );
 
   UserSettings copyWith({
@@ -85,6 +100,10 @@ class UserSettings {
     bool? languageRotationEnabled,
     bool? locationProfilesEnabled,
     double? profileRadiusMeters,
+    SpeechTalkativenessMode? talkativenessMode,
+    bool? stepAnnouncementsEnabled,
+    StepAnnouncementMode? stepAnnouncementMode,
+    int? dailyStepGoal,
     Object? homeLatitude = _unset,
     Object? homeLongitude = _unset,
     Object? workLatitude = _unset,
@@ -113,6 +132,11 @@ class UserSettings {
       locationProfilesEnabled:
           locationProfilesEnabled ?? this.locationProfilesEnabled,
       profileRadiusMeters: profileRadiusMeters ?? this.profileRadiusMeters,
+      talkativenessMode: talkativenessMode ?? this.talkativenessMode,
+      stepAnnouncementsEnabled:
+          stepAnnouncementsEnabled ?? this.stepAnnouncementsEnabled,
+      stepAnnouncementMode: stepAnnouncementMode ?? this.stepAnnouncementMode,
+      dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
       homeLatitude: identical(homeLatitude, _unset)
           ? this.homeLatitude
           : homeLatitude as double?,
@@ -146,6 +170,10 @@ class UserSettings {
         'languageRotationEnabled': languageRotationEnabled,
         'locationProfilesEnabled': locationProfilesEnabled,
         'profileRadiusMeters': profileRadiusMeters,
+        'talkativenessMode': talkativenessMode.storageValue,
+        'stepAnnouncementsEnabled': stepAnnouncementsEnabled,
+        'stepAnnouncementMode': stepAnnouncementMode.storageValue,
+        'dailyStepGoal': dailyStepGoal,
         'homeLatitude': homeLatitude,
         'homeLongitude': homeLongitude,
         'workLatitude': workLatitude,
@@ -163,17 +191,29 @@ class UserSettings {
           json['timeAnnouncementsEnabled'] as bool? ?? true,
       weatherAnnouncementsEnabled:
           json['weatherAnnouncementsEnabled'] as bool? ?? true,
-      announcementVolume: (json['announcementVolume'] as num?)?.toDouble() ?? 0.8,
+      announcementVolume:
+          (json['announcementVolume'] as num?)?.toDouble() ?? 0.8,
       quietHoursStart: (json['quietHoursStart'] as num?)?.toInt() ?? 22,
       quietHoursEnd: (json['quietHoursEnd'] as num?)?.toInt() ?? 7,
       lowBandwidthMode: json['lowBandwidthMode'] as bool? ?? true,
       adaptiveBatteryMode: json['adaptiveBatteryMode'] as bool? ?? true,
       use24Hour: json['use24Hour'] as bool? ?? true,
       screensaverMode: json['screensaverMode'] as bool? ?? false,
-      languageRotationEnabled: json['languageRotationEnabled'] as bool? ?? false,
-      locationProfilesEnabled: json['locationProfilesEnabled'] as bool? ?? false,
+      languageRotationEnabled:
+          json['languageRotationEnabled'] as bool? ?? false,
+      locationProfilesEnabled:
+          json['locationProfilesEnabled'] as bool? ?? false,
       profileRadiusMeters:
           (json['profileRadiusMeters'] as num?)?.toDouble() ?? 500,
+      talkativenessMode: speechTalkativenessModeFromStorage(
+        json['talkativenessMode'] as String?,
+      ),
+      stepAnnouncementsEnabled:
+          json['stepAnnouncementsEnabled'] as bool? ?? false,
+      stepAnnouncementMode: stepAnnouncementModeFromStorage(
+        json['stepAnnouncementMode'] as String?,
+      ),
+      dailyStepGoal: (json['dailyStepGoal'] as num?)?.toInt() ?? 8000,
       homeLatitude: (json['homeLatitude'] as num?)?.toDouble(),
       homeLongitude: (json['homeLongitude'] as num?)?.toDouble(),
       workLatitude: (json['workLatitude'] as num?)?.toDouble(),

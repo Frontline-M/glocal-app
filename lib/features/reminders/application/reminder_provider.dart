@@ -4,15 +4,19 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../../../core/speech/speech_governance_provider.dart';
 import '../../../core/storage/notification_registry.dart';
+import '../../settings/application/settings_provider.dart';
 import '../data/hive_reminder_repository.dart';
 import '../domain/reminder_item.dart';
 import 'reminder_service.dart';
 
 final speechToTextProvider = Provider<SpeechToText>((ref) => SpeechToText());
 final reminderTtsProvider = Provider<FlutterTts>((ref) => FlutterTts());
-final reminderRecorderProvider = Provider<AudioRecorder>((ref) => AudioRecorder());
-final reminderAudioPlayerProvider = Provider<AudioPlayer>((ref) => AudioPlayer());
+final reminderRecorderProvider =
+    Provider<AudioRecorder>((ref) => AudioRecorder());
+final reminderAudioPlayerProvider =
+    Provider<AudioPlayer>((ref) => AudioPlayer());
 
 final reminderServiceProvider = Provider<ReminderService>((ref) {
   return ReminderService(
@@ -22,10 +26,13 @@ final reminderServiceProvider = Provider<ReminderService>((ref) {
     tts: ref.read(reminderTtsProvider),
     recorder: ref.read(reminderRecorderProvider),
     audioPlayer: ref.read(reminderAudioPlayerProvider),
+    settingsService: ref.read(settingsServiceProvider),
+    governanceService: ref.read(speechGovernanceServiceProvider),
   );
 });
 
-final remindersProvider = AsyncNotifierProvider<RemindersNotifier, List<ReminderItem>>(
+final remindersProvider =
+    AsyncNotifierProvider<RemindersNotifier, List<ReminderItem>>(
   RemindersNotifier.new,
 );
 

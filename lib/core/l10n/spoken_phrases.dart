@@ -36,6 +36,12 @@ class SpokenPhrases {
         'missedSingular': 'You missed 1 reminder',
         'missedPlural': 'You missed {count} reminders',
         'andOthers': ', and others',
+        'stepProgressPrefix': 'You have walked',
+        'stepMilestonePrefix': 'Step milestone reached',
+        'stepGoalLabel': 'goal',
+        'stepTodayWord': 'steps today',
+        'stepGoalReached': 'You reached your daily step goal',
+        'stepEndOfDayPrefix': 'End of day total',
         'weather_clear': 'clear sky',
         'weather_partlyCloudy': 'partly cloudy',
         'weather_foggy': 'foggy',
@@ -884,9 +890,8 @@ class SpokenPhrases {
     final pack = packFor(languageCode);
     final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
     final minute = dateTime.minute.toString().padLeft(2, '0');
-    final period = dateTime.hour < 12
-        ? string(pack.code, 'am')
-        : string(pack.code, 'pm');
+    final period =
+        dateTime.hour < 12 ? string(pack.code, 'am') : string(pack.code, 'pm');
     return '$hour:$minute $period';
   }
 
@@ -954,9 +959,44 @@ class SpokenPhrases {
     required bool hasMore,
   }) {
     final introKey = count == 1 ? 'missedSingular' : 'missedPlural';
-    final intro = string(languageCode, introKey).replaceAll('{count}', '$count');
+    final intro =
+        string(languageCode, introKey).replaceAll('{count}', '$count');
     final suffix = hasMore ? string(languageCode, 'andOthers') : '';
     return '$intro. $preview$suffix.';
+  }
+
+  static String stepProgressSummary(
+    String languageCode, {
+    required int stepsToday,
+    required int goalSteps,
+  }) {
+    final prefix = string(languageCode, 'stepProgressPrefix');
+    final goalLabel = string(languageCode, 'stepGoalLabel');
+    final todayWord = string(languageCode, 'stepTodayWord');
+    return '$prefix $stepsToday $todayWord. $goalLabel $goalSteps.';
+  }
+
+  static String stepMilestoneReached(
+    String languageCode, {
+    required int milestonePercent,
+    required int stepsToday,
+    required int goalSteps,
+  }) {
+    if (milestonePercent >= 100) {
+      return '${string(languageCode, 'stepGoalReached')}. ${stepProgressSummary(languageCode, stepsToday: stepsToday, goalSteps: goalSteps)}';
+    }
+    final prefix = string(languageCode, 'stepMilestonePrefix');
+    final goalLabel = string(languageCode, 'stepGoalLabel');
+    return '$prefix. $milestonePercent percent of $goalLabel. ${stepProgressSummary(languageCode, stepsToday: stepsToday, goalSteps: goalSteps)}';
+  }
+
+  static String stepEndOfDaySummary(
+    String languageCode, {
+    required int stepsToday,
+    required int goalSteps,
+  }) {
+    final prefix = string(languageCode, 'stepEndOfDayPrefix');
+    return '$prefix. ${stepProgressSummary(languageCode, stepsToday: stepsToday, goalSteps: goalSteps)}';
   }
 
   static String _weatherBucket(int code) {

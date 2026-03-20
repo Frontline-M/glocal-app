@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+import '../../../core/speech/speech_governance_provider.dart';
 import '../../calendar/application/calendar_service.dart';
 import '../../calendar/data/device_calendar_service.dart';
 import '../../calendar/data/noop_calendar_service.dart';
@@ -40,13 +41,15 @@ final announcementServiceProvider = Provider<AnnouncementService>((ref) {
   return AnnouncementService(
     ref.read(ttsProvider),
     ref.read(calendarServiceProvider),
+    governanceService: ref.read(speechGovernanceServiceProvider),
     fallbackNextEvent: (now, within) async {
       final reminders = await ref.read(reminderServiceProvider).list();
       reminders.sort((a, b) => a.when.compareTo(b.when));
       final end = now.add(within);
       for (final reminder in reminders) {
         if (reminder.when.isAfter(now) && reminder.when.isBefore(end)) {
-          return CalendarEventSummary(title: reminder.title, start: reminder.when);
+          return CalendarEventSummary(
+              title: reminder.title, start: reminder.when);
         }
       }
       return null;
@@ -72,8 +75,10 @@ class HourlyAnnouncementController {
     settings = await _ref.read(locationProfileServiceProvider).apply(settings);
 
     final service = _ref.read(announcementServiceProvider);
-    await service.speakHourlyTime(now, settings);
-    final weather = _ref.read(weatherProvider).value;
-    await service.speakWeather(weather, settings, now);
+    await service.speakHourlyBundle(
+      now: now,
+      settings: settings,
+      weather: _ref.read(weatherProvider).value,
+    );
   }
 }
