@@ -14,5 +14,7 @@ abstract class StepDataProvider {
 
   Future<StepProviderAvailability> availability();
 
+  Future<bool> requestAccess();
+
   Future<DailyStepSnapshot?> readToday(DateTime now);
 }

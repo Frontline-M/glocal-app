@@ -25,6 +25,18 @@ class ChainedStepDataProvider implements StepDataProvider {
   }
 
   @override
+  Future<bool> requestAccess() async {
+    for (final provider in _providers) {
+      final availability = await provider.availability();
+      if (availability == StepProviderAvailability.available ||
+          availability == StepProviderAvailability.permissionRequired) {
+        return provider.requestAccess();
+      }
+    }
+    return false;
+  }
+
+  @override
   Future<DailyStepSnapshot?> readToday(DateTime now) async {
     for (final provider in _providers) {
       final availability = await provider.availability();

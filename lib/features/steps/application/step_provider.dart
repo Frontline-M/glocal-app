@@ -51,6 +51,19 @@ final stepAnnouncementServiceProvider =
   );
 });
 
+final stepAvailabilityProvider =
+    FutureProvider<StepProviderAvailability>((ref) {
+  return ref.read(stepDataProviderProvider).availability();
+});
+
+final stepSnapshotProvider = FutureProvider<DailyStepSnapshot?>((ref) {
+  return ref.read(stepDataProviderProvider).readToday(DateTime.now());
+});
+
+final stepAccessControllerProvider = Provider<StepAccessController>((ref) {
+  return StepAccessController(ref);
+});
+
 final stepAnnouncementControllerProvider =
     Provider<StepAnnouncementController>((ref) {
   return StepAnnouncementController(ref);
@@ -70,6 +83,24 @@ class StepAnnouncementController {
 
     settings = await _ref.read(locationProfileServiceProvider).apply(settings);
     await _ref.read(stepAnnouncementServiceProvider).runCycle(now, settings);
+  }
+}
+
+class StepAccessController {
+  StepAccessController(this._ref);
+
+  final Ref _ref;
+
+  Future<bool> requestAccess() async {
+    final granted = await _ref.read(stepDataProviderProvider).requestAccess();
+    _ref.invalidate(stepAvailabilityProvider);
+    _ref.invalidate(stepSnapshotProvider);
+    return granted;
+  }
+
+  void refresh() {
+    _ref.invalidate(stepAvailabilityProvider);
+    _ref.invalidate(stepSnapshotProvider);
   }
 }
 

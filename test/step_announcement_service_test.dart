@@ -136,6 +136,10 @@ class _FakeStepDataProvider implements StepDataProvider {
   Future<StepProviderAvailability> availability() async => availabilityValue;
 
   @override
+  Future<bool> requestAccess() async =>
+      availabilityValue == StepProviderAvailability.available;
+
+  @override
   Future<DailyStepSnapshot?> readToday(DateTime now) async => snapshot;
 }
 

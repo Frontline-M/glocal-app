@@ -14,6 +14,9 @@ class NoopStepDataProvider implements StepDataProvider {
   }
 
   @override
+  Future<bool> requestAccess() async => false;
+
+  @override
   Future<DailyStepSnapshot?> readToday(DateTime now) async {
     return null;
   }

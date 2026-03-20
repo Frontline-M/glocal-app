@@ -41,6 +41,17 @@ class MethodChannelStepDataProvider implements StepDataProvider {
   }
 
   @override
+  Future<bool> requestAccess() async {
+    try {
+      return await _channel.invokeMethod<bool>('requestAccess') ?? false;
+    } on MissingPluginException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
   Future<DailyStepSnapshot?> readToday(DateTime now) async {
     try {
       final result = await _channel.invokeMapMethod<String, dynamic>(

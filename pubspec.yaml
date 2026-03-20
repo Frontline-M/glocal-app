@@ -1,7 +1,7 @@
-﻿name: glocal
+name: glocal
 description: Glocal - local voice clock, weather announcer, and reminder assistant.
 publish_to: "none"
-version: 1.0.5+6
+version: 1.0.6+7
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -51,5 +51,6 @@ flutter_launcher_icons:
   ios: true
   image_path: assets/icons/app_icon_square.png
   min_sdk_android: 21
+
 
 

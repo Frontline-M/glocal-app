@@ -6,7 +6,9 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/config/app_languages.dart';
 import '../../../core/speech/speech_talkativeness.dart';
 import '../../announcements/application/announcement_provider.dart';
+import '../../steps/application/step_provider.dart';
 import '../../steps/domain/step_announcement_mode.dart';
+import '../../steps/domain/step_data_provider.dart';
 import '../../weather/application/weather_provider.dart';
 import '../application/settings_provider.dart';
 import '../domain/user_settings.dart';
@@ -18,6 +20,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncSettings = ref.watch(settingsProvider);
     final voices = ref.watch(voicesProvider);
+    final stepAvailability = ref.watch(stepAvailabilityProvider);
+    final stepSnapshot = ref.watch(stepSnapshotProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -183,6 +187,54 @@ class SettingsScreen extends ConsumerWidget {
                 },
               ),
               if (settings.stepAnnouncementsEnabled) ...[
+                const SizedBox(height: 12),
+                stepAvailability.when(
+                  data: (availability) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Step source status'),
+                    subtitle: Text(_stepAvailabilityLabel(availability)),
+                    trailing: FilledButton.tonal(
+                      onPressed: () async {
+                        final granted = await ref
+                            .read(stepAccessControllerProvider)
+                            .requestAccess();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              granted
+                                  ? 'Health Connect access granted'
+                                  : 'Health Connect access not granted',
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('Connect'),
+                    ),
+                  ),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) =>
+                      const Text('Unable to read step source status'),
+                ),
+                stepSnapshot.when(
+                  data: (snapshot) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Today\'s steps'),
+                    subtitle: Text(
+                      snapshot == null
+                          ? 'No step data available yet'
+                          : '${snapshot.stepsToday} steps (${snapshot.source.name})',
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () {
+                        ref.read(stepAccessControllerProvider).refresh();
+                      },
+                    ),
+                  ),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const Text('Unable to read today\'s steps'),
+                ),
                 const SizedBox(height: 12),
                 const Text('Step announcement mode'),
                 const SizedBox(height: 6),
@@ -622,6 +674,19 @@ class SettingsScreen extends ConsumerWidget {
         return 'unknown';
       default:
         return reason.replaceAll('_', ' ');
+    }
+  }
+
+  String _stepAvailabilityLabel(StepProviderAvailability availability) {
+    switch (availability) {
+      case StepProviderAvailability.available:
+        return 'Health data access is ready';
+      case StepProviderAvailability.permissionRequired:
+        return 'Health Connect permission is required';
+      case StepProviderAvailability.unsupported:
+        return 'Health Connect is not supported on this device';
+      case StepProviderAvailability.unavailable:
+        return 'Health Connect is unavailable';
     }
   }
 }
