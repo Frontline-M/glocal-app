@@ -7,7 +7,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.morning,
     locale: 'Nigeria',
     type: CultureSnippetType.dailyLife,
-    message: 'In many Nigerian homes, the morning begins with movement, planning, and preparing for the day.',
+    message: 'In many homes across Nigeria, mornings often begin with movement, planning, and preparation.',
     weight: 3,
   ),
   CulturalSnippet(
@@ -34,7 +34,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.evening,
     locale: 'Nigeria',
     type: CultureSnippetType.dailyLife,
-    message: 'In many Nigerian homes, evening is a time for dinner, family conversations, and unwinding.',
+    message: 'In many homes across Nigeria, evening often brings dinner, family conversation, and unwinding.',
     weight: 3,
   ),
   CulturalSnippet(
@@ -52,7 +52,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.night,
     locale: 'Accra',
     type: CultureSnippetType.cityLife,
-    message: 'In Accra, the city can remain warm and active into the night.',
+    message: 'In Accra, nights can be warm and gently active.',
     weight: 1,
   ),
   CulturalSnippet(
@@ -110,7 +110,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.morning,
     locale: 'Germany',
     type: CultureSnippetType.dailyLife,
-    message: 'In Germany, mornings often begin with structure and punctual routines.',
+    message: 'In Germany, mornings often begin with structure, punctual routines, and steady movement.',
     weight: 3,
   ),
   CulturalSnippet(
@@ -175,7 +175,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.morning,
     locale: 'German',
     type: CultureSnippetType.language,
-    message: 'In German, Guten Morgen means good morning.',
+    message: 'In German, Guten Morgen is a common way to say good morning.',
     weight: 2,
     expressiveOnly: true,
   ),
@@ -214,7 +214,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.afternoon,
     locale: 'South Korea',
     type: CultureSnippetType.dailyLife,
-    message: 'In South Korea, the afternoon can remain busy with work, study, and city movement.',
+    message: 'In South Korea, the afternoon can be busy with work, study, and city movement.',
     weight: 3,
   ),
   CulturalSnippet(
@@ -223,7 +223,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.night,
     locale: 'South Korea',
     type: CultureSnippetType.dailyLife,
-    message: 'In South Korea, some urban areas stay active well into the night.',
+    message: 'In South Korea, some urban nights can be lively well into the night.',
     weight: 2,
   ),
   CulturalSnippet(
@@ -232,7 +232,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.morning,
     locale: 'China',
     type: CultureSnippetType.dailyLife,
-    message: 'In many Chinese cities, the morning begins early, with transport, shops, and daily routines already in motion.',
+    message: 'In many Chinese cities, mornings often begin early, with transport and shops already in motion.',
     weight: 3,
   ),
   CulturalSnippet(
@@ -241,7 +241,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.evening,
     locale: 'China',
     type: CultureSnippetType.dailyLife,
-    message: 'In many Chinese cities, evening can still feel lively, with food streets and public spaces active.',
+    message: 'In many Chinese cities, evening can be lively, with food streets and public spaces active.',
     weight: 2,
   ),
   CulturalSnippet(
@@ -250,7 +250,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.evening,
     locale: 'Japan',
     type: CultureSnippetType.dailyLife,
-    message: 'In Japan, evening often brings a quieter transition from work to home, though cities may remain bright and active.',
+    message: 'In Japan, evening often brings a quieter shift from work to home, though cities may stay bright.',
     weight: 2,
   ),
   CulturalSnippet(
@@ -269,7 +269,7 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.evening,
     locale: 'Chinese',
     type: CultureSnippetType.language,
-    message: 'In Mandarin, Wan an can be used to wish someone a peaceful night.',
+    message: 'In Mandarin, Wan an is a common phrase for wishing someone a peaceful night.',
     weight: 2,
     expressiveOnly: true,
   ),
@@ -279,7 +279,9 @@ const List<CulturalSnippet> culturalSnippets = [
     timeSlot: CultureTimeSlot.night,
     locale: 'Tokyo',
     type: CultureSnippetType.cityLife,
-    message: 'In Tokyo, the city can feel both orderly and alive even after dark.',
+    message: 'In Tokyo, the city can be orderly and alive even after dark.',
     weight: 1,
   ),
 ];
+
+
