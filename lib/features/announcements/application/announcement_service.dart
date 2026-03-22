@@ -7,6 +7,9 @@ import '../../../core/speech/speech_talkativeness.dart';
 import '../../../core/utils/tts_locale_resolver.dart';
 import '../../calendar/application/calendar_service.dart';
 import '../../calendar/domain/calendar_event_summary.dart';
+import '../../culture/application/culture_history_service.dart';
+import '../../culture/application/culture_selector.dart';
+import '../../culture/domain/culture_models.dart';
 import '../../settings/domain/user_settings.dart';
 import '../../weather/domain/weather_snapshot.dart';
 
@@ -16,11 +19,17 @@ class AnnouncementService {
     this._calendarService, {
     required SpeechGovernanceService governanceService,
     this.fallbackNextEvent,
-  }) : _governanceService = governanceService;
+    CultureSelector? cultureSelector,
+    CultureHistoryService? cultureHistoryService,
+  })  : _governanceService = governanceService,
+        _cultureSelector = cultureSelector,
+        _cultureHistoryService = cultureHistoryService;
 
   final FlutterTts _tts;
   final CalendarService _calendarService;
   final SpeechGovernanceService _governanceService;
+  final CultureSelector? _cultureSelector;
+  final CultureHistoryService? _cultureHistoryService;
   final Future<CalendarEventSummary?> Function(DateTime now, Duration within)?
       fallbackNextEvent;
   static const _hourlyEventWindow = Duration(hours: 6);
@@ -70,6 +79,7 @@ class AnnouncementService {
       includesTime: bundle.includesTime,
       includesEvent: bundle.includesEvent,
       includesWeather: bundle.includesWeather,
+      includesCulture: bundle.includesCulture,
       bypassRecentSuppression: bundle.bypassRecentSuppression,
     );
   }
@@ -126,6 +136,13 @@ class AnnouncementService {
         bypassRecentSuppression: bundle.bypassRecentSuppression,
       ),
     );
+    final cultureSelection = bundle.cultureSelection;
+    if (cultureSelection != null && _cultureHistoryService != null) {
+      await _cultureHistoryService.recordSelection(
+        cultureSelection,
+        now,
+      );
+    }
   }
 
   Future<void> speakHourlyTime(DateTime now, UserSettings settings) async {
@@ -336,6 +353,22 @@ class AnnouncementService {
       }
     }
 
+    CultureSelection? cultureSelection;
+    if (_canAttachCulture(
+      settings: settings,
+      primary: primary,
+      existingSecondaryParts: secondaryParts,
+      eventUrgent: eventUrgent,
+    )) {
+      cultureSelection = await _selectCultureForBundle(
+        now: now,
+        settings: settings,
+      );
+      if (cultureSelection != null) {
+        secondaryParts.add(cultureSelection.message);
+      }
+    }
+
     final kinds = <SpeechAnnouncementKind>[];
     if (timeMessage.isNotEmpty) {
       kinds.add(SpeechAnnouncementKind.hourlyTime);
@@ -364,6 +397,58 @@ class AnnouncementService {
       includesTime: timeMessage.isNotEmpty,
       includesEvent: includeEventSnippet,
       includesWeather: weatherMessage.isNotEmpty,
+      includesCulture: cultureSelection != null,
+      cultureSelection: cultureSelection,
+    );
+  }
+
+  bool _canAttachCulture({
+    required UserSettings settings,
+    required String primary,
+    required List<String> existingSecondaryParts,
+    required bool eventUrgent,
+  }) {
+    if (_cultureSelector == null || _cultureHistoryService == null) {
+      return false;
+    }
+    if (!settings.cultureAnnouncementsEnabled ||
+        !settings.cultureAttachToAnnouncements) {
+      return false;
+    }
+    if (settings.talkativenessMode == SpeechTalkativenessMode.minimal) {
+      return false;
+    }
+    if (primary.trim().isEmpty) {
+      return false;
+    }
+    if (eventUrgent &&
+        settings.talkativenessMode != SpeechTalkativenessMode.expressive) {
+      return false;
+    }
+    if (settings.talkativenessMode != SpeechTalkativenessMode.expressive &&
+        existingSecondaryParts.isNotEmpty) {
+      return false;
+    }
+    return true;
+  }
+
+  Future<CultureSelection?> _selectCultureForBundle({
+    required DateTime now,
+    required UserSettings settings,
+  }) async {
+    final cultureSelector = _cultureSelector;
+    final cultureHistoryService = _cultureHistoryService;
+    if (cultureSelector == null || cultureHistoryService == null) {
+      return null;
+    }
+    final usageState = await cultureHistoryService.load(now);
+    return cultureSelector.select(
+      regionMode: settings.cultureRegionMode,
+      timeSlot: cultureTimeSlotFor(now),
+      talkMode: settings.talkativenessMode,
+      usageState: usageState,
+      now: now,
+      observancesEnabled: settings.cultureObservancesEnabled,
     );
   }
 
@@ -535,6 +620,8 @@ class _HourlyBundle {
     required this.includesTime,
     required this.includesEvent,
     required this.includesWeather,
+    required this.includesCulture,
+    this.cultureSelection,
   });
 
   final String message;
@@ -544,6 +631,8 @@ class _HourlyBundle {
   final bool includesTime;
   final bool includesEvent;
   final bool includesWeather;
+  final bool includesCulture;
+  final CultureSelection? cultureSelection;
 }
 
 class HourlySpeechPreview {
@@ -554,6 +643,7 @@ class HourlySpeechPreview {
     this.includesTime = false,
     this.includesEvent = false,
     this.includesWeather = false,
+    this.includesCulture = false,
     this.bypassRecentSuppression = false,
   });
 
@@ -563,5 +653,7 @@ class HourlySpeechPreview {
   final bool includesTime;
   final bool includesEvent;
   final bool includesWeather;
+  final bool includesCulture;
   final bool bypassRecentSuppression;
 }
+

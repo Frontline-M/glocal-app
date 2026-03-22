@@ -10,6 +10,8 @@ import '../../features/calendar/application/calendar_service.dart';
 import '../../features/calendar/data/device_calendar_service.dart';
 import '../../features/calendar/data/noop_calendar_service.dart';
 import '../../features/calendar/domain/calendar_event_summary.dart';
+import '../../features/culture/application/culture_history_service.dart';
+import '../../features/culture/application/culture_selector.dart';
 import '../../features/reminders/application/reminder_service.dart';
 import '../../features/reminders/data/hive_reminder_repository.dart';
 import '../../features/settings/application/location_profile_service.dart';
@@ -18,11 +20,11 @@ import '../../features/settings/data/hive_settings_repository.dart';
 import '../../features/settings/domain/user_settings.dart';
 import '../../features/steps/application/step_announcement_service.dart';
 import '../../features/steps/application/step_provider.dart';
+import '../../features/steps/domain/daily_step_snapshot.dart';
 import '../../features/steps/application/step_announcement_store.dart';
 import '../../features/steps/data/chained_step_data_provider.dart';
 import '../../features/steps/data/method_channel_step_data_provider.dart';
 import '../../features/steps/data/noop_step_data_provider.dart';
-import '../../features/steps/domain/daily_step_snapshot.dart';
 import '../../features/weather/application/weather_service.dart';
 import '../../features/weather/data/open_meteo_weather_repository.dart';
 import '../../features/weather/domain/weather_snapshot.dart';
@@ -67,6 +69,9 @@ class GlocalRuntime {
       HiveSpeechGovernanceStore(runtimeBox),
     );
     final settingsService = SettingsService(HiveSettingsRepository.fromHive());
+    final cultureHistoryService = CultureHistoryService(
+      HiveCultureHistoryStore(runtimeBox),
+    );
 
     final reminderService = ReminderService(
       speechToText: SpeechToText(),
@@ -94,6 +99,8 @@ class GlocalRuntime {
       FlutterTts(),
       calendarService,
       governanceService: governanceService,
+      cultureSelector: CultureSelector(),
+      cultureHistoryService: cultureHistoryService,
       fallbackNextEvent: (now, within) async {
         final reminders = await reminderService.list();
         final end = now.add(within);
@@ -218,3 +225,4 @@ class GlocalRuntime {
     await _stepAnnouncementService.runCycle(now, settings);
   }
 }
+

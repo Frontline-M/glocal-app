@@ -7,6 +7,7 @@ import '../../../core/config/app_languages.dart';
 import '../../../core/speech/speech_talkativeness.dart';
 import '../../announcements/application/announcement_provider.dart';
 import '../../steps/application/step_provider.dart';
+import '../../culture/presentation/culture_settings_section.dart';
 import '../../steps/domain/step_announcement_mode.dart';
 import '../../steps/domain/step_data_provider.dart';
 import '../../weather/application/weather_provider.dart';
@@ -274,6 +275,8 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 12),
+              CultureSettingsSection(settings: settings),
+              const SizedBox(height: 12),
               const Text('Talkativeness'),
               const SizedBox(height: 6),
               DropdownButtonFormField<SpeechTalkativenessMode>(
@@ -419,6 +422,9 @@ class SettingsScreen extends ConsumerWidget {
                   }
                   if (preview.includesWeather) {
                     parts.add('weather');
+                  }
+                  if (preview.includesCulture) {
+                    parts.add('culture');
                   }
 
                   final status = preview.willSpeak
@@ -740,3 +746,4 @@ class _QuietHoursTile extends ConsumerWidget {
     );
   }
 }
+

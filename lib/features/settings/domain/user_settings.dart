@@ -1,4 +1,5 @@
 import '../../../core/speech/speech_talkativeness.dart';
+import '../../culture/domain/culture_models.dart';
 import '../../steps/domain/step_announcement_mode.dart';
 
 class UserSettings {
@@ -24,6 +25,10 @@ class UserSettings {
     required this.stepAnnouncementsEnabled,
     required this.stepAnnouncementMode,
     required this.dailyStepGoal,
+    required this.cultureAnnouncementsEnabled,
+    required this.cultureRegionMode,
+    required this.cultureAttachToAnnouncements,
+    required this.cultureObservancesEnabled,
     this.homeLatitude,
     this.homeLongitude,
     this.workLatitude,
@@ -53,6 +58,10 @@ class UserSettings {
   final bool stepAnnouncementsEnabled;
   final StepAnnouncementMode stepAnnouncementMode;
   final int dailyStepGoal;
+  final bool cultureAnnouncementsEnabled;
+  final CultureRegionMode cultureRegionMode;
+  final bool cultureAttachToAnnouncements;
+  final bool cultureObservancesEnabled;
   final double? homeLatitude;
   final double? homeLongitude;
   final double? workLatitude;
@@ -80,6 +89,10 @@ class UserSettings {
         stepAnnouncementsEnabled: false,
         stepAnnouncementMode: StepAnnouncementMode.summaryOnly,
         dailyStepGoal: 8000,
+        cultureAnnouncementsEnabled: false,
+        cultureRegionMode: CultureRegionMode.globalMix,
+        cultureAttachToAnnouncements: true,
+        cultureObservancesEnabled: true,
       );
 
   UserSettings copyWith({
@@ -104,6 +117,10 @@ class UserSettings {
     bool? stepAnnouncementsEnabled,
     StepAnnouncementMode? stepAnnouncementMode,
     int? dailyStepGoal,
+    bool? cultureAnnouncementsEnabled,
+    CultureRegionMode? cultureRegionMode,
+    bool? cultureAttachToAnnouncements,
+    bool? cultureObservancesEnabled,
     Object? homeLatitude = _unset,
     Object? homeLongitude = _unset,
     Object? workLatitude = _unset,
@@ -137,6 +154,13 @@ class UserSettings {
           stepAnnouncementsEnabled ?? this.stepAnnouncementsEnabled,
       stepAnnouncementMode: stepAnnouncementMode ?? this.stepAnnouncementMode,
       dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
+      cultureAnnouncementsEnabled:
+          cultureAnnouncementsEnabled ?? this.cultureAnnouncementsEnabled,
+      cultureRegionMode: cultureRegionMode ?? this.cultureRegionMode,
+      cultureAttachToAnnouncements:
+          cultureAttachToAnnouncements ?? this.cultureAttachToAnnouncements,
+      cultureObservancesEnabled:
+          cultureObservancesEnabled ?? this.cultureObservancesEnabled,
       homeLatitude: identical(homeLatitude, _unset)
           ? this.homeLatitude
           : homeLatitude as double?,
@@ -174,6 +198,10 @@ class UserSettings {
         'stepAnnouncementsEnabled': stepAnnouncementsEnabled,
         'stepAnnouncementMode': stepAnnouncementMode.storageValue,
         'dailyStepGoal': dailyStepGoal,
+        'cultureAnnouncementsEnabled': cultureAnnouncementsEnabled,
+        'cultureRegionMode': cultureRegionMode.storageValue,
+        'cultureAttachToAnnouncements': cultureAttachToAnnouncements,
+        'cultureObservancesEnabled': cultureObservancesEnabled,
         'homeLatitude': homeLatitude,
         'homeLongitude': homeLongitude,
         'workLatitude': workLatitude,
@@ -214,6 +242,15 @@ class UserSettings {
         json['stepAnnouncementMode'] as String?,
       ),
       dailyStepGoal: (json['dailyStepGoal'] as num?)?.toInt() ?? 8000,
+      cultureAnnouncementsEnabled:
+          json['cultureAnnouncementsEnabled'] as bool? ?? false,
+      cultureRegionMode: cultureRegionModeFromStorage(
+        json['cultureRegionMode'] as String?,
+      ),
+      cultureAttachToAnnouncements:
+          json['cultureAttachToAnnouncements'] as bool? ?? true,
+      cultureObservancesEnabled:
+          json['cultureObservancesEnabled'] as bool? ?? true,
       homeLatitude: (json['homeLatitude'] as num?)?.toDouble(),
       homeLongitude: (json['homeLongitude'] as num?)?.toDouble(),
       workLatitude: (json['workLatitude'] as num?)?.toDouble(),
